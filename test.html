@@ -1,0 +1,38 @@
+<html>
+  <head> </head>
+  <body>
+    <menu
+      ><ul>
+        <li>
+          <form>
+            <select>
+              <option value="https://www.grepawk.com/static/FluidR3_GM.sf2">
+                General Midi Fluid R3
+              </option>
+              <option value="https://www.grepawk.com/static/GeneralUserGS.sf2">
+                GeneralUserGS
+              </option>
+            </select>
+          </form>
+        </li>
+      </ul></menu
+    >
+    <audio></audio><audio></audio><audio></audio>
+    <script type="module">
+      import { SF2File } from './dist/sffile.js';
+      import { SampleData } from './dist/sampleData.js';
+
+      const tags = document.querySelectorAll('tag');
+      const url = document.location.hash.length
+        ? document.location.hash.substr(1)
+        : null;
+      const sffile = document.location.hash.length
+        ? await SF2File.fromURL(document.location.hash.substr(1))
+        : await SF2File.fromURL();
+      debugger;
+      sffile.pdta.findPreset(2, 0, 33, 33).forEach((z) => {
+        new SampleData(z.sample, sffile);
+      });
+    </script>
+  </body>
+</html>
