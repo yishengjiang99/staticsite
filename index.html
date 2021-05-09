@@ -107,9 +107,7 @@
                    await ctx.resume();//.then(playNote);
                   }
                   const abs = new AudioBufferSourceNode(ctx, {
-                    buffer: sample.ab,
-                    loop:true
-                    
+                    buffer: sample.ab
                     });          
                     abs.loopStart=sample.startLoop-sample.start;
                     abs.loopEnd=sample.endLoop-sample.start;      

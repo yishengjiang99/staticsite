@@ -1,7 +1,7 @@
-import { SFZone, SFGenerator } from './Zone.js';
-import { IBag, InstrHeader, Mod, Pbag, Phdr } from './pdta.types.js';
-import { IReadAB } from './aba.js';
-import { Shdr } from './index.js';
+import { SFZone, SFGenerator } from "./Zone.js";
+import { IBag, InstrHeader, Mod, Pbag, Phdr } from "./pdta.types.js";
+import { IReadAB } from "./aba.js";
+import { Shdr } from "./index.js";
 type findPresetFnType = (
   pid: number,
   bank_id?: number,
@@ -103,7 +103,7 @@ export class PDTA {
       const sectionSize = r.get32();
       console.log(sectionName, sectionSize);
       switch (sectionName) {
-        case 'phdr':
+        case "phdr":
           for (let i = 0; i < sectionSize; i += phdrLength) {
             const phdrItem = {
               name: r.readNString(20),
@@ -124,7 +124,7 @@ export class PDTA {
             this.phdr.push(phdrItem);
           }
           break;
-        case 'pbag':
+        case "pbag":
           for (let i = 0; i < sectionSize; i += pbagLength) {
             this.pbag.push({
               pgen_id: r.get16(),
@@ -134,7 +134,7 @@ export class PDTA {
           }
 
           break;
-        case 'pgen': {
+        case "pgen": {
           let pgenId = 0,
             pbagId = 0,
             phdrId = 0;
@@ -160,7 +160,7 @@ export class PDTA {
           }
           break;
         }
-        case 'pmod':
+        case "pmod":
           for (let i = 0; i < sectionSize; i += pmodLength) {
             this.pmod.push({
               src: r.get16(),
@@ -171,7 +171,7 @@ export class PDTA {
             });
           }
           break;
-        case 'inst':
+        case "inst":
           for (let i = 0; i < sectionSize; i += instLength) {
             this.iheaders.push({
               name: r.readNString(20),
@@ -181,7 +181,7 @@ export class PDTA {
             });
           }
           break;
-        case 'ibag': {
+        case "ibag": {
           let ibginst = 0;
           for (let i = 0; i < sectionSize; i += pbagLength) {
             if (
@@ -202,7 +202,7 @@ export class PDTA {
 
           break;
         }
-        case 'igen': {
+        case "igen": {
           let ibagId = 0;
           for (let igenId = 0; igenId < sectionSize / igenLength; igenId++) {
             const opid = r.get8() | (r.get8() << 8);
@@ -219,7 +219,7 @@ export class PDTA {
           }
           break;
         }
-        case 'imod':
+        case "imod":
           for (let i = 0; i < sectionSize; i += imodLength) {
             this.imod.push({
               src: r.get16(),
@@ -231,7 +231,7 @@ export class PDTA {
           }
           break;
 
-        case 'shdr':
+        case "shdr":
           for (
             let i = 0;
             i < sectionSize;
