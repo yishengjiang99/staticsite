@@ -50,6 +50,7 @@
         let ctx = new AudioContext();
         let sampleOffset = 0;
         function createSamplebuffer() {
+          samples[sampleOffset].m
           samples[sampleOffset].ab = ctx.createBuffer(
             1,
             samples[sampleOffset].end - samples[sampleOffset].start,
@@ -86,6 +87,7 @@
             for (const sample of samples) {
               const div = h('div');
               for (const ib of sample.izones) {
+                ib.izone.sample=sample;
                 const card = h(
                   'span',
                   {},
@@ -96,14 +98,25 @@
                 const button = document.createElement('button');
 
                 button.innerText = sample.name;
-                button.onclick = () => {
+                button.onclick =async  () => {
+            
                   if (ctx.sampleRate !== sample.sampleRate)
-                    ctx = new AudioContext({ sampleRate: sample.sampleRate });
+                  ctx = new AudioContext({ sampleRate: sample.sampleRate });
+
+                  if(ctx.state!='running'){
+                   await ctx.resume();//.then(playNote);
+                  }
                   const abs = new AudioBufferSourceNode(ctx, {
                     buffer: sample.ab,
-                  });
-                  abs.connect(ctx.destination);
-                  abs.start();
+                    loop:true
+                    
+                    });          
+                    abs.loopStart=sample.startLoop-sample.start;
+                    abs.loopEnd=sample.endLoop-sample.start;      
+                  abs.connect(ctx.destination);                  
+                  abs.start()
+                  abs.stop(1);
+
                 };
                 card.appendChild(button);
                 div.appendChild(card);
@@ -112,7 +125,8 @@
             }
           });
       };
-      rendfile('GeneralUserGS.sf2');
+      rendfile(document.location.hash.length>0 ? document.location.hash.substr(1):'GeneralUserGS.sf2');
+
     </script>
   </body>
 </html>
