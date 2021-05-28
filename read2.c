@@ -57,19 +57,74 @@ int readsf(FILE *fd)
 	readSection(shdr);
 	return 1;
 }
+typedef struct _node
+{
+	void *data;
+	int index;
+	struct _node *spawn;
+	struct _node *next;
+} node;
+node *newNode(void *data, int index)
+{
+	node *nd = (node *)malloc(sizeof(node));
+	nd->data = data;
+	nd->index = index;
+	nd->next = NULL;
+	nd->spawn = NULL;
+	return nd;
+}
+zone_t *bagzone(pbagIdx)
+{
+	pbag *pg = pbags + pbagIdx;
+	pgen_t *lastg = pgens + pg[pbagIdx + 1].pgen_id;
+	int pgenId = pg->pgen_id;
+	int lastPgenId = pbagIdx < npbags - 1 ? pbags[pbagIdx + 1].pgen_id : npgens - 1;
+	short pgset[60] = {-1};
+	int instID = -1;
+	for (int k = pgenId; k < lastPgenId; k++)
+	{
+		pgen_t *g = pgens + k;
+		if (g->operator== 41)
+		{
+			instID = g->val.shAmount;
+		}
+		pgset[g->operator] = g->val.shAmount;
+	}
+}
 
-zone_t *index22(int pid, int bkid, int key, int vel)
+node *mklist()
+{
+	node *head = NULL;
+	node **tr = &head;
+	for (int i = nphdrs - 1; i >= 0; i--)
+	{
+
+		node *nd = newNode(&phdrs[i], phdrs[i].name[0] << 7 | phdrs[i].name[1]); // | phdrs[i].bankId);
+
+		while (*tr != NULL && nd->index >= (*tr)->index) //->pid > phdrs[i].pid)
+		{
+			tr = &(*tr)->next;
+		}
+		nd->next = *tr;
+		*tr = nd;
+		nd->spawn = newNode(bagzone(phdrs[i].pbagNdx), 1);
+	}
+	return head;
+}
+zone_t *index22(int pid, int bkid, int key, int vel, int ch)
 {
 	int found = 0;
-	short igset[60] = {-1};
-	int instID = -1;
+	short igset[60];
+	int instID = -1, lastInstID = -1;
 	int lastSampId = -1;
-	short pgdef[60] = {-1};
+
+	short pgdef[60];
 	for (int i = 0; i < nphdrs - 1; i++)
 	{
 		if (phdrs[i].bankId != bkid || phdrs[i].pid != pid)
 			continue;
 		int lastbag = phdrs[i + 1].pbagNdx;
+		int lastInstID = -1;
 
 		for (int j = phdrs[i].pbagNdx; j < lastbag; j++)
 		{
@@ -77,7 +132,7 @@ zone_t *index22(int pid, int bkid, int key, int vel)
 			pgen_t *lastg = pgens + pg[j + 1].pgen_id;
 			int pgenId = pg->pgen_id;
 			int lastPgenId = j < npbags - 1 ? pbags[j + 1].pgen_id : npgens - 1;
-			short pgset[60] = {-1};
+			short pgset[60];
 			instID = -1;
 			for (int k = pgenId; k < lastPgenId; k++)
 			{
@@ -94,17 +149,18 @@ zone_t *index22(int pid, int bkid, int key, int vel)
 				}
 				pgset[g->operator] = g->val.shAmount;
 			}
-			if (instID == -1)
+			if (instID != lastInstID)
 			{
 				memcpy(pgdef, pgset, sizeof(pgset));
 			}
 			else
 			{
 				inst *ihead = insts + instID;
+				lastInstID = instID;
 				int ibgId = ihead->ibagNdx;
 				int lastibg = (ihead + 1)->ibagNdx;
 				lastSampId = -1;
-				short igdef[60] = {-1};
+				short igdef[60];
 				for (int ibg = ibgId; ibg < lastibg; ibg++)
 				{
 					short igset[60];
@@ -113,10 +169,9 @@ zone_t *index22(int pid, int bkid, int key, int vel)
 					for (pgen_t *g = igens + ibgg->igen_id; g->operator!= 60 && g != lastig; g++)
 					{
 						if (g->operator== 48)
-							printf("atten %hu", g->val.shAmount);
-						if (g->operator== 44 &&(g->val.ranges.lo > vel || g->val.ranges.hi < vel))
-							break;
-						if (g->operator== 43 &&(g->val.ranges.lo > key || g->val.ranges.hi < key))
+							if (vel > -1 && g->operator== 44 &&(g->val.ranges.lo > vel || g->val.ranges.hi < vel))
+								break;
+						if (key > -1 && g->operator== 43 &&(g->val.ranges.lo > key || g->val.ranges.hi < key))
 							break;
 
 						igset[g->operator]=g->val.shAmount;
@@ -142,13 +197,11 @@ zone_t *index22(int pid, int bkid, int key, int vel)
 							//		printf("\n samp%d", lastSampId);
 							shdrcast *sh = (shdrcast *)(shdrs + lastSampId);
 							z->sample = sh;
-
 							z->start = sh->start + ((unsigned short)(z->StartAddrCoarseOfs & 0x7f) << 15) + (unsigned short)(z->StartAddrOfs & 0x7f);
 							z->end = sh->end + ((unsigned short)(z->EndAddrCoarseOfs & 0x7f) << 15) + (unsigned short)(z->EndAddrOfs & 0x7f);
 							z->endloop = sh->endloop + ((unsigned short)(z->EndLoopAddrCoarseOfs & 0x7f) << 15) + (unsigned short)(z->EndLoopAddrOfs & 0x7f);
 							z->startloop = sh->startloop + (unsigned short)(z->StartLoopAddrCoarseOfs & 0x7f << 15) + (unsigned short)(z->StartLoopAddrOfs & 0x7f);
-
-							return z;
+							ctx->channels[ch].voice++ = newVoice(z, key, vel);
 						}
 					}
 				}
@@ -174,6 +227,7 @@ static inline float p2over1200(float x)
 		return p2over1200LUT[(unsigned short)(x)];
 	}
 }
+
 static float centdbLUT[960];
 static float centdblut(int x)
 {
@@ -274,10 +328,18 @@ typedef struct
 	channel_t *channels;
 } ctx_t;
 
-static float outputLeft[128];
-static float outputRight[128];
+static float outputs[128 * 16 * 2];
 static float outputInterweaved[128 * 2];
+static inline float hermite4(float frac_pos, float xm1, float x0, float x1, float x2)
+{
+	const float c = (x1 - xm1) * 0.5f;
+	const float v = x0 - x1;
+	const float w = c + v;
+	const float a = w + v + (x2 - x0) * 0.5f;
+	const float b_neg = w + a;
 
+	return ((((a * frac_pos) - b_neg) * frac_pos + c) * frac_pos + x0);
+}
 ctx_t *ctx;
 void loop(voice *v, channel_t *ch)
 {
@@ -290,7 +352,10 @@ void loop(voice *v, channel_t *ch)
 	{
 		float f1 = *(sdta + v->pos);
 		float f2 = *(sdta + v->pos + 1);
-		float gain = f1 + (f2 - f1) * v->frac;
+		float f3 = *(sdta + v->pos + 2);
+		float m1 = *(sdta + v->pos - 1);
+		float gain = hermite4(v->frac, m1, f1, f2, f3);
+
 		float tt = envShift(v->ampvol); // + cb_attentuate;
 		//	printf("\n atten %d f", tt);
 
@@ -321,8 +386,13 @@ void render(int frames, FILE *output)
 			{
 				loop(v, ctx->channels + ch);
 			}
+			if (v->ampvol->release_steps < 120)
+			{
+				v->midi = 0;
+			}
 		}
 		frames -= 128;
+
 		fwrite(outputInterweaved, 128, 4, output);
 	}
 }
@@ -355,50 +425,24 @@ void init_ctx()
 		(ctx->channels + i)->program_number = 0;
 		(ctx->channels + i)->midi_pan = 1.f;
 		(ctx->channels + i)->midi_gain_cb = 89.0f;
-		(ctx->channels + i)->voice = (voice *)malloc(sizeof(voice));
+		(ctx->channels + i)->voice = (voice *)malloc(sizeof(voice) * 4);
 	}
 }
 int mkfifo(char *sf);
-int main()
-{
-#define png(outputInterweaved)                                                                                   \
-	output = popen("ffmpeg -y -f f32le -i pipe:0 -filter_complex showwavespic=s=400x400 -frames:v 1 ff.png", "w"); \
-	fwrite(outputInterweaved, sizeof(float), n, output);                                                           \
-	pclose(output);
-	//	FILE *dl = popen("curl -s 'https://www.grepawk.com/static/Timpani-20201121.sf2' -o -", "r");
-	FILE *dl = fopen("file.sf2", "rb");
-	readsf(dl);
-	fclose(dl);
-	for (int i = 0; i < nphdrs; i++)
-		printf("\n %d %s %d", i, phdrs[i].name, phdrs[i].pid);
 
-	//FILE *proc = popen("ffmpeg -y -f f32le -i pipe:0 -ac 2 -ar 48000 -f flac ggg.flac", "w");
-	FILE *proc = popen("ffplay -f f32le -ac 2 -ar 48000 -i pipe:0", "w");
+// int main()
+// {
 
-	init_ctx();
-	initLUTs();
-	(ctx->channels + 0)->program_number = 0;
-	(ctx->channels + 1)->program_number = 33;
-	(ctx->channels + 2)->program_number = 60;
+// 	//	FILE *dl = popen("curl -s 'https://www.grepawk.com/static/Timpani-20201121.sf2' -o -", "r");
+// 	FILE *dl = fopen("file.sf2", "rb");
+// 	readsf(dl);
+// 	fclose(dl);
+// 	for (int i = 0; i < nphdrs; i++)
+// 		printf("\n %d %s %d", i, phdrs[i].name, phdrs[i].pid);
 
-	int v = 0, dv = 1;
-	while (v < 45)
-	{
-		int _v = v;
-		noteOn(0, 33 + v, v * 3);
+// 	init_ctx();
+// 	initLUTs();
+// 	index22(0, 0, -1, -1, 0);
 
-		render(24000, proc);
-
-		noteOff(0, 33 + v);
-
-		render(24000, proc);
-		usleep(1e6 / 3);
-		v = v + dv;
-		if (v > 10)
-			dv = -2;
-	}
-
-	pclose(proc);
-
-	return 0;
-}
+// 	return 0;
+// }

@@ -11,11 +11,11 @@
     <audio></audio>
 
     <script type="module">
-      import { sfbkstream } from './dist/sfbkstream.js';
-      import { PDTA } from './dist/pdta.js';
-      import { generatorNames } from './dist/sf.types.js';
-      import { readAB } from './dist/aba.js';
+      import { sfbkstream,PDTA } from './node_modules/parse-sf2/dist/index.js'
+      import {readAB}from './node_modules/parse-sf2/dist/aba.js';
       import { mkdiv as h } from './node_modules/mkdiv/index.js';
+      import { generatorNames } from './dist/sf.types.js';
+      import { readMidi } from './node_modules/midiread/dist/midiread.js';
       const rendfile = async (file) => {
         const { pdtaBuffer, sdtaStream, nsamples,infos } = await sfbkstream(file);
         document.body.append(h("section",{},[
@@ -97,10 +97,10 @@
                 );
                 const button = document.createElement('button');
 
-                button.innerText = sample.name;
+                button.innerText =sample.name;
                 button.onclick =async  () => {
             
-                  if (ctx.sampleRate !== sample.sampleRate)
+                  if (!ctx)
                   ctx = new AudioContext({ sampleRate: sample.sampleRate });
 
                   if(ctx.state!='running'){
@@ -109,8 +109,7 @@
                   const abs = new AudioBufferSourceNode(ctx, {
                     buffer: sample.ab
                     });          
-                    abs.loopStart=sample.startLoop-sample.start;
-                    abs.loopEnd=sample.endLoop-sample.start;      
+               
                   abs.connect(ctx.destination);                  
                   abs.start()
                   abs.stop(1);

@@ -4,11 +4,14 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ls"
+    "build": "cmake --build build",
+    "test": "cd build && ctest && cd -"
   },
   "author": "Yisheng Jiang",
   "license": "ISC",
   "dependencies": {
-    "mkdiv": "^1.0.0"
+    "midiread": "^2.0.1",
+    "mkdiv": "^1.0.0",
+    "parse-sf2": "^2.1.2"
   }
 }
